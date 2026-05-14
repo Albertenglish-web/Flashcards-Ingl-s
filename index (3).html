@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Flashcards Inglés</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4F3FD4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Flashcards">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root{--bg:#F7F5F0;--surface:#FFF;--surface2:#EFEDE8;--border:#E0DDD6;--text:#1A1917;--text2:#6B6860;--text3:#A8A6A0;--purple:#4F3FD4;--purple-light:#EAE7FF;--green:#1D7A4F;--green-light:#E2F5EC;--red:#C0392B;--red-light:#FDECEA;--amber:#B45309;--amber-light:#FEF3C7;--gold:#92640A;--gold-light:#FEF3C7;--radius:14px;--radius-sm:8px;--font:'DM Sans',system-ui,sans-serif;--mono:'DM Mono',monospace}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior:none}
+  .app{display:flex;flex-direction:column;min-height:100vh;max-width:520px;margin:0 auto}
+  header{padding:1.25rem 1.25rem 0;display:flex;align-items:center;justify-content:space-between}
+  .logo{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;color:var(--text)}.logo span{color:var(--purple)}
+  .tab-bar{display:flex;gap:4px;padding:.75rem 1.25rem 0}
+  .tab{flex:1;padding:8px 4px;border:none;background:transparent;border-radius:var(--radius-sm);font-family:var(--font);font-size:11.5px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
+  .tab svg{width:14px;height:14px;flex-shrink:0}
+  .tab.active{background:var(--surface);color:var(--purple);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .tab:not(.active):hover{background:var(--surface2)}
+  .content{flex:1;padding:1rem 1.25rem 2rem}
+  .hint-box{background:var(--purple-light);border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;color:var(--purple);margin-bottom:14px;line-height:1.5}
+  .hint-box code{font-family:var(--mono);background:rgba(79,63,212,.12);padding:1px 5px;border-radius:4px}
+  .cat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+  .cat-header{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .cat-header input{flex:1;font-size:13px;font-weight:500}
+  label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+  input,textarea,select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s;appearance:none;-webkit-appearance:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--purple);background:var(--surface)}
+  textarea{resize:vertical;min-height:90px;font-size:13px;line-height:1.6}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:all .14s;-webkit-user-select:none;user-select:none}
+  .btn:active{transform:scale(.97)}
+  .btn svg{width:16px;height:16px;flex-shrink:0}
+  .btn-primary{background:var(--purple);color:#fff;border-color:var(--purple)}.btn-primary:hover{background:#3D30B8}
+  .btn-ghost{background:transparent;border-color:transparent;color:var(--text2);padding:8px}.btn-ghost:hover{background:var(--surface2)}
+  .btn-danger{color:var(--red);border-color:transparent;background:transparent}.btn-danger:hover{background:var(--red-light)}
+  .btn-dashed{border-style:dashed;color:var(--text2);width:100%;margin-top:6px}.btn-dashed:hover{background:var(--surface2)}
+  .row-stretch{display:flex;gap:8px;flex-wrap:wrap}
+  .msg{font-size:13px;padding:10px 12px;border-radius:var(--radius-sm);margin-top:10px}
+  .msg-ok{background:var(--green-light);color:var(--green)}.msg-err{background:var(--red-light);color:var(--red)}
+  .controls-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .controls-row label{font-size:11px;margin-bottom:3px}
+  select{font-size:13px;padding:8px 10px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .chip{padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:500;border:1px solid var(--border);cursor:pointer;transition:all .14s;background:var(--surface);color:var(--text2)}
+  .chip.on{background:var(--purple-light);color:var(--purple);border-color:rgba(79,63,212,.3)}
+  .progress-wrap{margin-bottom:10px}
+  .progress-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--purple);border-radius:3px;transition:width .35s ease}
+  .progress-label{font-size:11px;color:var(--text3);margin-top:4px;display:flex;justify-content:space-between}
+  /* Score ring */
+  .score-ring-wrap{display:flex;justify-content:center;margin-bottom:12px}
+  .score-ring{position:relative;width:80px;height:80px}
+  .score-ring svg{transform:rotate(-90deg)}
+  .score-ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+  .ring-bg{stroke:var(--border)}
+  .ring-fill{stroke:var(--purple);transition:stroke-dashoffset .5s ease,stroke .3s}
+  .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .score-num{font-size:1.3rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+  .score-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+  .flashcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;text-align:center;cursor:pointer;margin-bottom:14px;position:relative;transition:transform .12s,box-shadow .12s;box-shadow:0 2px 0 var(--border)}
+  .flashcard:active{transform:scale(.985);box-shadow:none}
+  .card-lang{position:absolute;top:14px;left:14px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+  .lang-es{background:var(--amber-light);color:var(--amber)}.lang-en{background:var(--purple-light);color:var(--purple)}
+  .card-num{position:absolute;top:14px;right:14px;font-size:11px;color:var(--text3)}
+  .card-word{font-size:1.9rem;font-weight:600;letter-spacing:-.03em;line-height:1.2;margin-bottom:6px}
+  .card-cat{font-size:12px;color:var(--text3)}
+  .card-hint{font-size:12px;color:var(--text3);margin-top:14px;display:flex;align-items:center;gap:4px}
+  .card-hint svg{width:13px;height:13px}
+  .flip-answer{font-size:1.5rem;font-weight:600;color:var(--purple);text-align:center;padding:14px;background:var(--purple-light);border-radius:var(--radius);margin-bottom:14px;letter-spacing:-.02em;animation:fadeIn .2s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .answer-wrap{margin-bottom:12px}
+  .answer-wrap input{font-size:1.1rem;text-align:center;padding:12px;border-radius:var(--radius-sm)}
+  .result{font-size:14px;font-weight:600;text-align:center;padding:10px;border-radius:var(--radius-sm);margin-bottom:12px;animation:fadeIn .2s ease}
+  .result-ok{background:var(--green-light);color:var(--green)}.result-bad{background:var(--red-light);color:var(--red)}
+  .action-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center}
+  .stat-n{font-size:1.3rem;font-weight:600;display:block;letter-spacing:-.02em}
+  .stat-label{font-size:11px;color:var(--text3);margin-top:2px;display:block}
+  .n-ok{color:var(--green)}.n-bad{color:var(--red)}.n-rem{color:var(--purple)}
+  /* Finish screen */
+  .finish-overlay{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;animation:fadeIn .3s ease}
+  .finish-score{font-size:3.5rem;font-weight:600;letter-spacing:-.04em;color:var(--purple);line-height:1}
+  .finish-label{font-size:13px;color:var(--text2);margin-top:4px}
+  .finish-sub{font-size:13px;color:var(--text2);margin:12px 0}
+  .new-best{background:var(--gold-light);color:var(--gold);font-size:13px;font-weight:600;padding:6px 14px;border-radius:20px;display:inline-block;margin:10px 0}
+  /* Leaderboard */
+  .lb-section{margin-bottom:1.5rem}
+  .lb-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+  .lb-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border);margin-bottom:6px}
+  .lb-pos{font-size:16px;width:26px;text-align:center}
+  .lb-info{flex:1}.lb-cats{font-size:12px;color:var(--text2)}.lb-date{font-size:11px;color:var(--text3)}
+  .lb-score{font-size:1.2rem;font-weight:600;color:var(--purple)}
+  /* List */
+  .list-cat-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px}
+  .word-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .word-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:12.5px}
+  .word-es{color:var(--text2)}.word-en{color:var(--purple);font-weight:500;margin-top:2px}
+  .list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .count-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2);font-weight:500}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--text2)}
+  .empty-state svg{width:48px;height:48px;opacity:.3;margin:0 auto 12px;display:block}
+  .empty-state p{font-size:14px;line-height:1.6}.empty-state a{color:var(--purple);text-decoration:none;font-weight:500}
+  #install-banner{margin:.75rem 1.25rem 0;background:var(--purple-light);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--purple)}
+  #install-banner button{margin-left:auto;flex-shrink:0}
+  .upload-area{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:10px;background:var(--surface)}
+  .upload-area:hover{border-color:var(--purple)}
+  .upload-area input{display:none}
+  .upload-icon{font-size:2rem;margin-bottom:6px}
+  .upload-area p{font-size:13px;color:var(--text2)}.upload-area small{font-size:12px;color:var(--text3)}
+  .section-sep{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text3);font-size:12px}
+  .section-sep::before,.section-sep::after{content:'';flex:1;height:1px;background:var(--border)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">flash<span>cards</span> inglés</div>
+    <div style="font-size:12px;color:var(--text3)" id="word-count-header"></div>
+  </header>
+
+  <div id="install-banner" style="display:none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    <span>Instala la app para usarla sin internet</span>
+    <button class="btn btn-primary" id="install-btn" style="font-size:12px;padding:6px 12px">Instalar</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('install-banner').style.display='none'" style="padding:4px 6px">✕</button>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('import')" id="t-import">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Importar
+    </button>
+    <button class="tab" onclick="showTab('study')" id="t-study">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Estudiar
+    </button>
+    <button class="tab" onclick="showTab('scores')" id="t-scores">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Ranking
+    </button>
+    <button class="tab" onclick="showTab('list')" id="t-list">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>Vocab
+    </button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ IMPORT ═══ -->
+    <div id="tab-import">
+      <label style="margin-bottom:8px;font-size:13px;color:var(--text)">Desde Excel (.xlsx / .csv)</label>
+      <div class="upload-area" onclick="document.getElementById('xlsx-input').click()">
+        <input type="file" id="xlsx-input" accept=".xlsx,.xls,.csv" onchange="handleXlsx(event)">
+        <div class="upload-icon">📊</div>
+        <p>Toca para seleccionar tu archivo Excel</p>
+        <small>Col. A = español &nbsp;·&nbsp; Col. B = inglés<br>El nombre de la hoja será la categoría</small>
+      </div>
+      <div id="xlsx-msg"></div>
+
+      <div class="section-sep">o escribe manualmente</div>
+
+      <div class="hint-box">Cada línea: <code>español = inglés</code><br>Para varias respuestas válidas usa <code>/</code>: <code>no hay problema = no problem / no worries</code><br>Separadores de par válidos: <code>=</code> coma, <code>;</code> o tabulación.</div>
+      <div id="cats-wrap"></div>
+      <button class="btn btn-dashed" onclick="addCat()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M12 5v14M5 12h14"/></svg>Añadir categoría
+      </button>
+      <div class="row-stretch" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="importAll()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>Guardar
+        </button>
+        <button class="btn" onclick="loadExample()">Ver ejemplo</button>
+      </div>
+      <div id="import-msg"></div>
+    </div>
+
+    <!-- ═══ STUDY ═══ -->
+    <div id="tab-study" style="display:none">
+      <div id="study-empty" class="empty-state" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        <p>Aún no tienes vocabulario.<br><a href="#" onclick="showTab('import');return false">Ir a importar →</a></p>
+      </div>
+      <div id="study-main">
+        <div class="controls-row">
+          <div><label>Dirección</label>
+            <select id="dir-sel" onchange="resetStudy()">
+              <option value="es-en">ES → EN</option>
+              <option value="en-es">EN → ES</option>
+              <option value="rnd">Aleatoria</option>
+            </select>
+          </div>
+          <div><label>Modo</label>
+            <select id="mode-sel" onchange="resetStudy()">
+              <option value="write">Escribir</option>
+              <option value="flip">Voltear</option>
+            </select>
+          </div>
+        </div>
+        <label style="margin-bottom:6px">Categorías (una o varias)</label>
+        <div class="chips" id="chips"></div>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+          <div class="progress-label"><span id="plabel">0 / 0</span><span id="plabel-r" style="color:var(--text3)"></span></div>
+        </div>
+
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle class="ring-bg" cx="40" cy="40" r="34"/>
+              <circle class="ring-fill" id="ring-fill" cx="40" cy="40" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+            </svg>
+            <div class="score-center">
+              <span class="score-num" id="score-num">—</span>
+              <span class="score-lbl">nota</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="finish-screen" style="display:none">
+          <div class="finish-overlay">
+            <div class="finish-score" id="finish-score">0</div>
+            <div class="finish-label">puntos sobre 100</div>
+            <div id="new-best-badge" style="display:none" class="new-best">🏆 ¡Nueva mejor puntuación!</div>
+            <div class="finish-sub" id="finish-sub"></div>
+            <div class="row-stretch" style="justify-content:center;margin-top:14px">
+              <button class="btn btn-primary" onclick="resetStudy()">Jugar de nuevo</button>
+              <button class="btn" onclick="showTab('scores')">Ver ranking</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="card-area">
+          <div class="flashcard" id="fc" onclick="cardClick()">
+            <span class="card-lang" id="fc-lang"></span>
+            <span class="card-num" id="fc-num"></span>
+            <div class="card-word" id="fc-word">—</div>
+            <div class="card-cat" id="fc-cat"></div>
+            <div class="card-hint" id="fc-hint" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>Toca para ver
+            </div>
+          </div>
+          <div id="flip-ans" style="display:none" class="flip-answer"></div>
+          <div class="answer-wrap" id="write-wrap" style="display:none">
+            <input id="ans-input" type="text" placeholder="Escribe la respuesta..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')checkAns()"/>
+          </div>
+          <div id="result-div" style="display:none" class="result"></div>
+          <div class="action-row">
+            <button class="btn btn-primary" id="btn-check" onclick="checkAns()" style="display:none">Comprobar</button>
+            <button class="btn" onclick="nextCard()">Siguiente →</button>
+            <button class="btn" onclick="resetStudy()" title="Reiniciar">↺</button>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card"><span class="stat-n n-ok" id="s-ok">0</span><span class="stat-label">Correctas</span></div>
+            <div class="stat-card"><span class="stat-n n-bad" id="s-bad">0</span><span class="stat-label">Errores</span></div>
+            <div class="stat-card"><span class="stat-n n-rem" id="s-rem">0</span><span class="stat-label">Restantes</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SCORES ═══ -->
+    <div id="tab-scores" style="display:none">
+      <div id="scores-wrap"></div>
+    </div>
+
+    <!-- ═══ LIST ═══ -->
+    <div id="tab-list" style="display:none">
+      <div id="list-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// PWA
+let deferredInstall=null;
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;document.getElementById('install-banner').style.display='flex'});
+document.getElementById('install-btn').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();const{outcome}=await deferredInstall.userChoice;if(outcome==='accepted')document.getElementById('install-banner').style.display='none';deferredInstall=null});
+window.addEventListener('appinstalled',()=>document.getElementById('install-banner').style.display='none');
+
+// State
+const MAX=100;
+let vocab=JSON.parse(localStorage.getItem('fc3_vocab')||'[]');
+let scores=JSON.parse(localStorage.getItem('fc3_scores')||'{}');
+let deck=[],cur=0,flipped=false,answered=0,stats={ok:0,bad:0},activeCats=new Set(),catId=0,gameOver=false;
+
+// Tabs
+function showTab(t){
+  ['import','study','scores','list'].forEach(id=>{
+    document.getElementById('tab-'+id).style.display=id===t?'':'none';
+    document.getElementById('t-'+id).classList.toggle('active',id===t);
+  });
+  if(t==='study')initStudy();
+  if(t==='scores')renderScores();
+  if(t==='list')renderList();
+  updateHdr();
+}
+function updateHdr(){document.getElementById('word-count-header').textContent=vocab.length?vocab.length+' palabras':'';}
+
+// Excel
+function handleXlsx(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      let all=[],errs=0;
+      wb.SheetNames.forEach(sn=>{
+        const ws=wb.Sheets[sn];
+        const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!data.length)return;
+        let startRow=0,cat=sn||'General';
+        const first=data[0];
+        // if first row has no second column, treat as title row
+        if(first&&String(first[0]||'').trim()&&!String(first[1]||'').trim()){cat=String(first[0]).trim();startRow=1;}
+        else{
+          const f0=String(first[0]||'').toLowerCase();
+          if(f0.includes('español')||f0.includes('castellano')||f0.includes('término')||f0==='word'){cat=sn;startRow=1;}
+        }
+        for(let i=startRow;i<data.length;i++){
+          const r=data[i];
+          const es=String(r[0]||'').trim(),en=String(r[1]||'').trim();
+          if(es&&en)all.push({es,en,cat});else if(es||en)errs++;
+        }
+      });
+      const msg=document.getElementById('xlsx-msg');
+      if(!all.length){msg.innerHTML='<div class="msg msg-err">No se encontraron pares válidos. Columna A = español, columna B = inglés.</div>';return;}
+      vocab=[...vocab,...all];
+      localStorage.setItem('fc3_vocab',JSON.stringify(vocab));
+      updateHdr();
+      msg.innerHTML=`<div class="msg msg-ok">✓ ${all.length} palabras importadas${errs?' ('+errs+' filas ignoradas)':''}. <a href="#" onclick="showTab('study');return false">Ir a estudiar →</a></div>`;
+      e.target.value='';
+    }catch(err){document.getElementById('xlsx-msg').innerHTML='<div class="msg msg-err">Error: '+err.message+'</div>';}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Manual import
+function addCat(name='',text=''){
+  catId++;const id=catId;
+  const d=document.createElement('div');d.className='cat-block';d.id='cb-'+id;
+  d.innerHTML=`<div class="cat-header"><input type="text" placeholder="Nombre (ej: Verbos)" value="${name}" id="cn-${id}"/><button class="btn btn-ghost" onclick="document.getElementById('cb-${id}').remove()" aria-label="Eliminar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><textarea id="ct-${id}" placeholder="hablar = to speak&#10;comer = to eat&#10;casa = house">${text}</textarea>`;
+  document.getElementById('cats-wrap').appendChild(d);
+}
+function importAll(){
+  const blocks=document.querySelectorAll('[id^="cb-"]');
+  const words=[];let errs=0;
+  blocks.forEach(b=>{
+    const num=b.id.split('-')[1];
+    const cat=(document.getElementById('cn-'+num).value.trim())||'General';
+    const raw=document.getElementById('ct-'+num).value.trim();if(!raw)return;
+    raw.split('\n').forEach(line=>{
+      line=line.trim();if(!line)return;
+      const sep=line.includes('=')?'=':line.includes('\t')?'\t':line.includes(';')?';':',';
+      const parts=line.split(sep);if(parts.length<2){errs++;return;}
+      const es=parts[0].trim(),en=parts.slice(1).join(sep).trim();
+      if(es&&en)words.push({es,en,cat});else errs++;
+    });
+  });
+  const msg=document.getElementById('import-msg');
+  if(!words.length){msg.innerHTML='<div class="msg msg-err">No se encontraron palabras válidas.</div>';return;}
+  vocab=[...vocab,...words];localStorage.setItem('fc3_vocab',JSON.stringify(vocab));updateHdr();
+  msg.innerHTML=`<div class="msg msg-ok">✓ ${words.length} palabras guardadas${errs?' ('+errs+' ignoradas)':''}. <a href="#" onclick="showTab('study');return false">Ir a estudiar →</a></div>`;
+}
+function loadExample(){
+  document.getElementById('cats-wrap').innerHTML='';catId=0;
+  addCat('Verbos','hablar = to speak\ncomer = to eat\ncorrer = to run\ndormir = to sleep\nleer = to read\nescribir = to write\nviajar = to travel');
+  addCat('Adjetivos','rápido = fast\nlento = slow\ngrande = big\npequeño = small\nfeliz = happy\ntriste = sad\ncansado = tired');
+  addCat('Expresiones','buenos días = good morning\nhasta luego = see you later\nde nada = you\'re welcome\nlo siento = I\'m sorry\nqué tal = how are you');
+}
+
+// Study
+function getCats(){return[...new Set(vocab.map(w=>w.cat))];}
+function initStudy(){
+  if(!vocab.length){document.getElementById('study-empty').style.display='';document.getElementById('study-main').style.display='none';return;}
+  document.getElementById('study-empty').style.display='none';document.getElementById('study-main').style.display='';
+  const cats=getCats();if(activeCats.size===0)cats.forEach(c=>activeCats.add(c));
+  renderChips(cats);resetStudy();
+}
+function renderChips(cats){
+  const el=document.getElementById('chips');el.innerHTML='';
+  cats.forEach(c=>{
+    const b=document.createElement('button');b.className='chip'+(activeCats.has(c)?' on':'');b.textContent=c;
+    b.onclick=()=>{if(activeCats.has(c))activeCats.delete(c);else activeCats.add(c);b.classList.toggle('on');resetStudy();};
+    el.appendChild(b);
+  });
+}
+function resetStudy(){
+  const filtered=vocab.filter(w=>activeCats.has(w.cat));
+  deck=shuffle([...filtered]).slice(0,MAX);
+  cur=0;flipped=false;answered=0;stats={ok:0,bad:0};gameOver=false;
+  document.getElementById('finish-screen').style.display='none';
+  document.getElementById('card-area').style.display='';
+  updateScore();updateStats();showCard();
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function getDir(){const v=document.getElementById('dir-sel').value;return v==='rnd'?(Math.random()<.5?'es-en':'en-es'):v;}
+
+function showCard(){
+  if(!deck.length)return;
+  if(cur>=deck.length){finishGame();return;}
+  const card=deck[cur],dir=getDir();card._dir=dir;
+  const mode=document.getElementById('mode-sel').value;
+  document.getElementById('fc-word').textContent=dir==='es-en'?card.es:card.en;
+  document.getElementById('fc-cat').textContent=card.cat;
+  document.getElementById('fc-num').textContent=(cur+1)+'/'+deck.length;
+  const lang=document.getElementById('fc-lang');
+  lang.textContent=dir==='es-en'?'Español':'English';
+  lang.className='card-lang '+(dir==='es-en'?'lang-es':'lang-en');
+  document.getElementById('flip-ans').style.display='none';
+  document.getElementById('result-div').style.display='none';
+  flipped=false;
+  if(mode==='write'){
+    document.getElementById('write-wrap').style.display='';document.getElementById('fc-hint').style.display='none';document.getElementById('btn-check').style.display='';
+    const inp=document.getElementById('ans-input');inp.value='';setTimeout(()=>inp.focus(),80);
+  }else{document.getElementById('write-wrap').style.display='none';document.getElementById('fc-hint').style.display='';document.getElementById('btn-check').style.display='none';}
+  updateProgress();updateStats();
+}
+function cardClick(){
+  const mode=document.getElementById('mode-sel').value;if(mode!=='flip'||flipped)return;
+  const card=deck[cur];
+  document.getElementById('flip-ans').textContent=card._dir==='es-en'?card.en:card.es;
+  document.getElementById('flip-ans').style.display='';document.getElementById('fc-hint').style.display='none';flipped=true;
+}
+function checkAns(){
+  const mode=document.getElementById('mode-sel').value;if(mode!=='write'){nextCard();return;}
+  const card=deck[cur];
+  const fullAnswer=card._dir==='es-en'?card.en:card.es;
+  const validAnswers=fullAnswer.split(/[\/;]/).map(a=>a.trim()).filter(a=>a.length>0);
+  const input=document.getElementById('ans-input').value.trim();
+  const rdiv=document.getElementById('result-div');rdiv.style.display='';
+  const isCorrect=validAnswers.some(ans=>norm(input)===norm(ans));
+  if(isCorrect){
+    rdiv.className='result result-ok';rdiv.textContent='✓ ¡Correcto!';stats.ok++;
+  }else{
+    rdiv.className='result result-bad';rdiv.textContent='✗ Era: "'+validAnswers.join(' / ')+'"';stats.bad++;
+  }
+  answered++;updateScore();updateStats();setTimeout(nextCard,1400);
+}
+function norm(s){
+  return s.toLowerCase()
+    .replace(/[áàäâã]/g,'a').replace(/[éèëê]/g,'e').replace(/[íìïî]/g,'i')
+    .replace(/[óòöôõ]/g,'o').replace(/[úùüû]/g,'u').replace(/ñ/g,'n')
+    .replace(/[\/\-]/g,' ')         // slashes and hyphens → space
+    .replace(/[^a-z0-9 ]/g,'')     // remove remaining punctuation
+    .replace(/\s+/g,' ').trim();   // collapse multiple spaces
+}
+function nextCard(){cur++;if(cur>=deck.length){finishGame();return;}showCard();}
+
+function calcScore(){if(!answered)return null;return Math.round(stats.ok/answered*100);}
+function updateScore(){
+  const sc=calcScore();const circ=213.6;
+  const ring=document.getElementById('ring-fill');const numEl=document.getElementById('score-num');
+  if(sc===null){numEl.textContent='—';ring.style.strokeDashoffset=circ;ring.style.stroke='var(--purple)';return;}
+  numEl.textContent=sc;ring.style.strokeDashoffset=circ-(circ*sc/100);
+  ring.style.stroke=sc>=80?'var(--green)':sc>=50?'var(--purple)':'var(--red)';
+}
+function updateProgress(){
+  const t=deck.length;
+  document.getElementById('pfill').style.width=(t?Math.round(cur/t*100):0)+'%';
+  document.getElementById('plabel').textContent=cur+' / '+t;
+  document.getElementById('plabel-r').textContent='máx '+MAX+' cartas';
+}
+function updateStats(){
+  document.getElementById('s-ok').textContent=stats.ok;
+  document.getElementById('s-bad').textContent=stats.bad;
+  document.getElementById('s-rem').textContent=Math.max(0,deck.length-cur);
+}
+
+// Finish
+function finishGame(){
+  if(gameOver)return;gameOver=true;
+  const sc=calcScore()??0;
+  document.getElementById('finish-score').textContent=sc;
+  document.getElementById('finish-sub').textContent=stats.ok+' correctas · '+stats.bad+' errores · '+answered+' respondidas';
+  // save to leaderboard
+  const catKey=[...activeCats].sort().join('|')||'todas';
+  if(!scores[catKey])scores[catKey]=[];
+  const prev=scores[catKey].length?scores[catKey][0].score:-1;
+  scores[catKey].push({score:sc,ok:stats.ok,bad:stats.bad,total:answered,date:new Date().toLocaleDateString('es-ES'),cats:[...activeCats]});
+  scores[catKey].sort((a,b)=>b.score-a.score);
+  const isNewBest=sc>prev&&answered>0;
+  scores[catKey]=scores[catKey].slice(0,10);
+  localStorage.setItem('fc3_scores',JSON.stringify(scores));
+  document.getElementById('new-best-badge').style.display=isNewBest?'inline-block':'none';
+  document.getElementById('card-area').style.display='none';
+  document.getElementById('finish-screen').style.display='';
+}
+
+// Scores tab
+function renderScores(){
+  const el=document.getElementById('scores-wrap');
+  const keys=Object.keys(scores);
+  if(!keys.length){el.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><p>Aún no hay puntuaciones.<br>Completa una partida para verlas aquí.</p></div>';return;}
+  let html='';
+  keys.forEach(key=>{
+    const list=scores[key];
+    const catLabel=key.replace(/\|/g,' + ');
+    html+=`<div class="lb-section"><div class="lb-title"><span>${catLabel}</span><button class="btn btn-danger" style="font-size:11px;padding:3px 8px" onclick="clearScores('${key}')">Borrar</button></div>`;
+    list.forEach((e,i)=>{
+      const medals=['🥇','🥈','🥉'];
+      const pos=medals[i]||'#'+(i+1);
+      html+=`<div class="lb-row"><div class="lb-pos">${pos}</div><div class="lb-info"><div class="lb-cats">${e.ok} correctas · ${e.bad} errores</div><div class="lb-date">${e.date}</div></div><div class="lb-score">${e.score}<span style="font-size:11px;color:var(--text3)">/100</span></div></div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+function clearScores(key){
+  if(confirm('¿Borrar el ranking de "'+key.replace(/\|/g,' + ')+'"?')){delete scores[key];localStorage.setItem('fc3_scores',JSON.stringify(scores));renderScores();}
+}
+
+// List tab
+function renderList(){
+  const el=document.getElementById('list-wrap');
+  if(!vocab.length){el.innerHTML='<div class="empty-state"><p>No hay vocabulario todavía.</p></div>';return;}
+  const cats=getCats();
+  let html=`<div class="list-header"><span class="count-badge">${vocab.length} palabras</span><button class="btn btn-danger" onclick="clearAll()" style="font-size:12px;padding:6px 10px">Borrar todo</button></div>`;
+  cats.forEach(cat=>{
+    const words=vocab.filter(w=>w.cat===cat);
+    html+=`<div class="list-cat-title">${cat} (${words.length})</div><div class="word-grid">`;
+    words.forEach(w=>{html+=`<div class="word-item"><div class="word-es">${w.es}</div><div class="word-en">${w.en}</div></div>`;});
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+function clearAll(){
+  if(confirm('¿Borrar todo el vocabulario guardado?')){vocab=[];localStorage.removeItem('fc3_vocab');updateHdr();renderList();}
+}
+
+// Init
+addCat();updateHdr();
+</script>
+</body>
+</html>
